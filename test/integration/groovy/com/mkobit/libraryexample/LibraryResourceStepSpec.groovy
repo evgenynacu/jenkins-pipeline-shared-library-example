@@ -20,9 +20,19 @@ class LibraryResourceStepSpec extends Specification {
     given:
     final CpsFlowDefinition flow = new CpsFlowDefinition('''
       final resource = libraryResource('com/mkobit/globallibraryresources/lorumipsum.txt')
-      echo "Resource Text: $resource"
+      final testYml = libraryResource('com/mkobit/globallibraryresources/test.yml')
+        
+      def datas = readYaml text: testYml
+      node {
+        def pom = readMavenPom file: "pom.xml"
+        echo "Resource Text: $resource"
+        echo "ArtifactId: ${pom.artifactId}"
+      }
     '''.stripIndent(), true)
     final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'project')
+    rule.jenkins.getWorkspaceFor(workflowJob)
+      .child("pom.xml")
+      .copyFrom(getClass().getResourceAsStream("/parent-pom.xml"))
     workflowJob.definition = flow
 
     when:
@@ -31,5 +41,6 @@ class LibraryResourceStepSpec extends Specification {
     then:
     final WorkflowRun run = rule.assertBuildStatusSuccess(futureRun)
     rule.assertLogContains('Resource Text: Lorem ipsum dolor sit amet', run)
+    println(run.log)
   }
 }
